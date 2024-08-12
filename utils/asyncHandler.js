@@ -15,16 +15,16 @@
 //         success: false,  // for frontend devs
 //         message: err.message
 //     })
-//   }  search node.js api error online for more details in errors 
+//   }  search node.js api error online for more details in errors
 // }****************************************************************************
-// 
+//
 
 // Wrapper function with Promise HOF
- const asyncHandler = (reqHandler) =>{
-    (req,res,next) =>{
-        Promise.resolve(reqHandler(req,res,next)).catch((err)=>next(err))
-    }
- }
+const asyncHandler = (reqHandler) => {
+  return (req, res, next) => {
+    // imp give return statement as it will give error in route.js
+    Promise.resolve(reqHandler(req, res, next)).catch((err) => next(err));
+  };
+};
 
-
-export {asyncHandler}
+export { asyncHandler };

@@ -17,4 +17,16 @@ app.use(express.static("public")); // for storing any assests (img,pdf etc) insi
 // for setting and getting access of cookies in users Browsers (CRUD operation)
 app.use(cookieParser());
 
+
+//routes import
+import userRouter from '../routes/user.routes.js'
+
+
+// routes declaration
+app.use("/api/v1/users", userRouter)
+// always start a route leading with a "/ " 
+// standard practice to keep everything clean 
+// example http:localhost:PORT/api/v1/users/(userRouter="register"(specified in userRouter) or any other route in routes)
+// this will make users routes more clean 
+
 export default app;
