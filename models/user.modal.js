@@ -61,7 +61,7 @@ const userSchema = new Schema(
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next(); // if password not modified then directly next
   // if password is modified(updated)  then bcrypt it
-  this.password = bcrypt.hash(this.password, 10); // 10 salts/hash round
+  this.password = await bcrypt.hash(this.password, 10); // 10 salts/hash round
   next();
 });
 
@@ -90,7 +90,6 @@ userSchema.methods.generateRefreshToken = function () {
     // to generate a token
     {
       _id: this._id,
-    
     },
     process.env.REFRESH_TOKEN_SECRET,
     {
