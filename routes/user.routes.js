@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import { loginUser, logoutUser, registerUser } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
+import { veryfiyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -19,6 +20,12 @@ router.route("/register").post(
 );
 // here when users are directed to register then they will be directed to controllers folder
 // example http:localhost:PORT/api/v1/users/register/....
+
+router.route("/login").post(loginUser)
+
+
+//secured routes
+router.route("/logout").post(veryfiyJWT ,logoutUser)
 
 export default router;
 // declared in app.js
