@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js"; // Utility to handle as
 import { User } from "../models/user.modal.js"; // User model for interacting with the database
 import { uploadOnCloudinary } from "../utils/cloudinary.js"; // Utility to upload files to Cloudinary
 import { ApiResponse } from "../utils/ApiResponse.js"; // Custom class to format API responses
+import jwt from "jsonwebtoken";
 
 // Function to generate access and refresh tokens for a user
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -11,21 +12,30 @@ const generateAccessAndRefreshTokens = async (userId) => {
     // Find the user in the database using their ID
     const user = await User.findById(userId);
 
+    // Check if the user exists
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
     // Generate an access token using a method defined in the User model
-    const accessToken = user.generateAccesToken();
+    const accessToken = user.generateAccessToken();
 
     // Generate a refresh token using a method defined in the User model
     const refreshToken = user.generateRefreshToken();
 
     // Save the refresh token to the user document in the database
     user.refreshToken = refreshToken;
-    await user.save({ validateBefore: false });
+    await user.save({ validateBeforeSave: false });
 
     // Return both tokens
     return { accessToken, refreshToken };
   } catch (error) {
-    // Throw an error if something goes wrong during token generation
-    throw new ApiError(500, "Something went wrong in access or Refresh token");
+    console.error("Error during token generation:", error);
+    throw new ApiError(
+      500,
+      "Something went wrong in access or Refresh token",
+      error
+    );
   }
 };
 
@@ -207,5 +217,65 @@ const logoutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged out")); // Send a JSON response confirming the logout
 });
 
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  try {
+    // Get the incoming refresh token from either the cookies or the request body
+    const incommingRefreshToken =
+      req.cookie.refreshToken || req.body.refreshToken;
+
+    // If no refresh token is provided, throw an unauthorized error
+    if (!incommingRefreshToken) {
+      throw new ApiError(401, "unauthorized request");
+    }
+
+    // Verify the incoming refresh token using the secret stored in environment variables
+    const decodedToken = jwt.verify(
+      incommingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    // Find the user associated with the decoded token's user ID (_id)
+    const user = await User.findById(decodedToken?._id);
+
+    // If no user is found, throw an invalid token error
+    if (!user) {
+      throw new ApiError(401, "Invalid Refresh Token");
+    }
+
+    // Check if the incoming refresh token matches the one stored in the user's record
+    if (incommingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "Refresh Token is expired or used");
+    }
+
+    // Define options for setting cookies to ensure they are secure and HTTP-only
+    const options = {
+      httpOnly: true, // Prevents client-side access to the cookie via JavaScript
+      secure: true, // Ensures the cookie is only sent over HTTPS
+    };
+
+    // Generate new access and refresh tokens for the user
+    const { accessToken, newRefreshToken } =
+      await generateAccessAndRefreshTokens(user._id);
+
+    // Set the new tokens in cookies and respond with a success message and the new tokens
+    return res
+      .status(200) // Send an HTTP 200 OK status
+      .cookie("accessToken", accessToken, options) // Set the new access token in the cookie
+      .cookie("refreshToken", newRefreshToken, options) // Set the new refresh token in the cookie
+      .json(
+        new ApiResponse(
+          200,
+          { accessToken, refreshToken: newRefreshToken }, // Include the new tokens in the response
+          "Access token refreshed" // Success message
+        )
+      );
+  } catch (error) {
+    // Log the error to the console for debugging
+    console.error("Error during token refresh (catch block)", error);
+    // Rethrow the error to be handled by the global error handler
+    throw error;
+  }
+});
+
 // Export the functions to be used in other parts of the application
-export { registerUser, loginUser, logoutUser };
+export { registerUser, loginUser, logoutUser, refreshAccessToken };

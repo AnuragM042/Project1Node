@@ -1,6 +1,6 @@
-import { User } from "../models/user.modal";
-import { ApiError } from "../utils/APiError";
-import { asyncHandler } from "../utils/asyncHandler";
+import { User } from "../models/user.modal.js";
+import { ApiError } from "../utils/APiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
 
 export const veryfiyJWT = asyncHandler(async (req, res, next) => {
