@@ -58,18 +58,24 @@ const userSchema = new Schema(
 // pre is a hook
 // dont use arrow function as there is no "this" context
 // use async as we are connecting to db and next for passing flag forward
+//
+// Pre-save hook for the User model
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next(); // if password not modified then directly next
-  // if password is modified(updated)  then bcrypt it
-  this.password = await bcrypt.hash(this.password, 10); // 10 salts/hash round
+  // If the password field hasn't been modified, skip this middleware
+  if (!this.isModified("password")) return next();
+
+  // If the password field has been modified, hash the new password before saving it
+  this.password = await bcrypt.hash(this.password, 10); // 10 salt rounds
+
+  // Proceed to the next middleware or save the document
   next();
 });
 
+// Method to check if the provided password matches the hashed password in the database
 userSchema.methods.isPasswordCorrect = async function (password) {
-  // password is user typing password and this.password is saved users password
+  // Compare the provided password with the stored hashed password
   return await bcrypt.compare(password, this.password);
 };
-
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     // to generate a token

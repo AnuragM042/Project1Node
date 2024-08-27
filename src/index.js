@@ -1,7 +1,8 @@
 // require('dotenv').config()
 import dotenv from "dotenv";
 import connectDB from "../db/index.js";
-import app  from './app.js'
+import app from "./app.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 dotenv.config({
   path: "./.env",
@@ -9,9 +10,10 @@ dotenv.config({
 
 connectDB()
   .then(() => {
-   const port =  app.listen(process.env.PORT || 9000, () => {
-       console.log(`server is running at ${port}}`);
-    //   console.log(port)
+    const port = app.listen(process.env.PORT || 9000, () => {
+      console.log(`server is running at ${port}}`);
+
+      //   console.log(port)
     });
   })
   .catch((err) => {
@@ -28,11 +30,7 @@ connectDB()
 
 
 
-
-
-
-
-
+  
 
 /*7
 For writing both express and db inside one module 

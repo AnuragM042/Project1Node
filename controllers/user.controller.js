@@ -277,5 +277,143 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  console.log(req.body);
+  // Extract old and new passwords from the request body
+  const { oldPassword, newPassword } = req.body;
+
+  // Find the user in the database using their ID stored in req.user (populated by middleware)
+  const user = await User.findById(req.user?._id);
+
+  // Check if the old password provided by the user matches the one in the database
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+  // If the old password is incorrect, throw an error
+  if (!isPasswordCorrect) {
+    throw new ApiError(400, "Invalid Old Password");
+  }
+
+  // If the old password is correct, set the new password
+  user.password = newPassword;
+
+  // Save the user with the new password, skipping validation checks
+  await user.save({ validateBeforeSave: false });
+
+  // Send a success response to the client
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfully"));
+});
+
+// This function handles fetching the current user's information.
+const getCurrentUser = asyncHandler(async (req, res) => {
+  // Send the current user information stored in req.user as a response
+  return res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
+});
+
+// This function updates the user's account details like fullname and email.
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { fullname, email } = req.body;
+
+  // Ensure both fullname and email are provided in the request
+  if (!fullname || !email) {
+    throw new ApiError(400, "All fields are required");
+  }
+
+  // Find the user by ID and update their fullname and email, returning the updated user
+  const user = await User.findByIdAndUpdate(
+    req.body?._id, // Assuming the user's ID is sent in the request body
+    {
+      $set: {
+        fullname,
+        email,
+      },
+    },
+    { new: true } // Return the updated user document
+  ).select("-password"); // Exclude the password from the returned user object
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Account details updated successfully"));
+});
+
+// This function updates the user's avatar image.
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const avatarLocalPath = req.file?.path; // Get the file path of the uploaded avatar image
+
+  // Ensure an avatar file was uploaded
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is missing");
+  }
+
+  // Upload the avatar to Cloudinary or another cloud storage service
+  const avatar = await uploadOnCloudinary(avatarLocalPath);
+
+  // Ensure the avatar was uploaded successfully
+  if (!avatar.url) {
+    throw new ApiError(400, "Error while updating avatar");
+  }
+
+  // Update the user's avatar URL in the database
+  const user = await User.findOneAndUpdate(
+    req.user?._id, // The user's ID is assumed to be available in req.user._id
+    {
+      $set: {
+        avatar: avatar.url,
+      },
+    },
+    { new: true } // Return the updated user document
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Avatar updated successfully"));
+});
+
+// This function updates the user's cover image.
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const coverImageLocalPath = req.file?.path; // Get the file path of the uploaded cover image
+
+  // Ensure a cover image file was uploaded
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, "Cover image file is missing");
+  }
+
+  // Upload the cover image to Cloudinary or another cloud storage service
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+
+  // Ensure the cover image was uploaded successfully
+  if (!coverImage.url) {
+    throw new ApiError(400, "Error while updating cover image");
+  }
+
+  // Update the user's cover image URL in the database
+  const user = await User.findOneAndUpdate(
+    req.user?._id, // The user's ID is assumed to be available in req.user._id
+    {
+      $set: {
+        coverImage: coverImage.url, // Set the coverImage URL in the user document
+      },
+    },
+    { new: true } // Return the updated user document
+  ).select("-password");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Cover image updated successfully"));
+});
+
 // Export the functions to be used in other parts of the application
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage
+};
